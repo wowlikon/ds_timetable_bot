@@ -26,6 +26,10 @@ class Change:
             "teacher": self.teacher,
             "replace": dict(zip(('from', 'to'), self.replacing))
             }
+    
+    @staticmethod
+    def from_dict(data: dict) -> 'Change':
+        return Change(data['group'], data['lesson'], data['replace']['from'], data['replace']['to'], data['teacher'], data['room'])
 
 class Changes:
     def __init__(self):
@@ -35,6 +39,7 @@ class Changes:
         return "\n".join(map(str, self.changes))
     
     def append(self, elem: Change):
+        if elem.group == "Группа": return
         self.changes.append(elem)
     
     def get_by_group(self, group: str) -> list:
@@ -54,12 +59,20 @@ class Changes:
         result = {}
         for i in self.changes:
             t = i.as_dict()
-            tg = t['group']
-            if tg not in result.keys():
-                result[tg] = {"changes":[]}
-            t.pop('group')
-            result[tg]['changes'].append(t)
+            if t['group'] not in result.keys():
+                result[t['group']] = {"changes":[]}
+            result[t['group']]['changes'].append(t)
         return result
+
+    @staticmethod
+    def from_dict(data: dict, day: str) -> 'Changes':
+        c = data['changes']
+        print(c)
+        res = Changes()
+        res.changes = []
+        for i in c:
+            res.changes.append(Change.from_dict(i))
+        return res
 
 def parseFile(file: str, cache: str) -> str:
     filePL = Path(file) #ch_data
@@ -84,17 +97,21 @@ def parseFile(file: str, cache: str) -> str:
             change = Change(*line)
             changes.append(change)
 
-    return changes
+    data = changes.as_dict()
+    with open(cache+'ch_data.json', 'w+', encoding='utf-8') as f:
+        ujson.dump(data, f)
+    
+    meta_data = list(data.keys())
+    with open(cache+'ch_meta_data.json', 'w+', encoding='utf-8') as f:
+        ujson.dump({"groups": list(data.keys())}, f)
+        
+    return cache
 
 def parseCache(filename: str, group: str, day: str) -> Changes:
-    with open(filename+'ср_data.json', 'r', encoding='utf-8') as f:
-        tt = ujson.load(f)['groups']
-    print(tt)
-    g = tt.get(group, {})
-    print(group, ':', g)
-    d = g.get(day, {})
-    print(day, ':', d)
-    return Changes.from_dict(d, day)
+    with open(filename+'ch_data.json', 'r', encoding='utf-8') as f:
+        ch = ujson.load(f)
+    g = ch.get(group, {})
+    return Changes.from_dict(g, day)
 
 def makeTable(data: list) -> str:
     return t2a(

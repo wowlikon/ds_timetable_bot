@@ -7,10 +7,10 @@ import traceback, ujson, datetime, os
 from functools import wraps, partial
 from dotenv import load_dotenv
 import asyncio, aiosqlite
-import lessons
+import lessons, changes
 
 load_dotenv()
-temp = os.environ.get('tmp')
+temp = os.environ.get('cache')
 wBot = commands.Bot(command_prefix='!', case_insensitive=True)
 
 async def create_table():
@@ -53,12 +53,20 @@ def async_run(func):
     return run
 
 @async_run
-def parseFile(file: str, cache: str) -> str:
+def parseTTFile(file: str, cache: str) -> str:
     return lessons.parseFile(file, cache)
 
 @async_run
-def parseCache(cache: str, group: str, day: str) -> list:
+def parseTTCache(cache: str, group: str, day: str) -> list:
     return lessons.parseCache(cache, group, day)
+
+@async_run
+def parseChFile(file: str, cache: str) -> str:
+    return changes.parseFile(file, cache)
+
+@async_run
+def parseChCache(cache: str, group: str, day: str) -> list:
+    return changes.parseCache(cache, group, day)
 
 @wBot.event
 async def on_ready():
@@ -75,14 +83,14 @@ async def get_groups(ctx: AutocompleteContext):
 
 @wBot.event
 async def on_message(message):
-    if message.content != "timetable": return
+    if message.author == wBot.user: return
     contentType = None
     
     try:
-        f = message.attachments[0]
-        if len(message.attachments) > 1: raise ValueError("Incorrect file count.")
+        if len(message.attachments) == 1: raise ValueError("Incorrect file count.")
         
         if message.content == "timetable":
+            f = message.attachments[0]
             if f.filename.split(".")[-1] != "xlsx": raise ValueError("Incorrect file type.")
             await f.save(temp+"timetable.xlsx")
             embed = Embed(title=f"__**Расписание загружено**__", color=0x4488ee)
@@ -90,23 +98,30 @@ async def on_message(message):
             contentType = 'tt'
         
         elif message.content == "changes":
-            if f.filename.split(".")[-1] != "xlsx": raise ValueError("Incorrect file type.")
-            await f.save(temp+"timetable.xlsx")
+            f = message.attachments[0]
+            if f.filename.split(".")[-1] != "xls": raise ValueError("Incorrect file type.")
+            await f.save(temp+"changes.xls")
             embed = Embed(title=f"__**Изменения загружены**__", color=0x4488ee)
             embed.add_field(name=f'**{message.author}**', value=f'> файл успешно сохранён идёт проверка...', inline=False)
             contentType = 'ch'
         
+        else: return
+        
+        try: await message.delete()
+        except: print("Delete failed")
+        await message.channel.send(message.author.mention, embed=embed)
+        
     except Exception:
         embed = Embed(title=f"__**Нужно выбрать 1 файл**__", color=0xee0000)
         embed.add_field(name=f'{message.author}', value=f'> сообщение должно содержать\n> один файл в формате таблицы', inline=False)
+        await message.channel.send(message.author.mention, embed=embed)
+        
+        try: await message.delete()
+        except: print("Delete failed")
         traceback.print_exc() #INFO
     
-    await message.channel.send(message.author.mention, embed=embed)
-    try: await message.delete()
-    except: print("Delete failed")
-    
     if contentType == 'tt':
-        cf = await parseFile(temp+f"timetable.xlsx", temp)
+        cf = await parseTTFile(temp+f"timetable.xlsx", temp)
         with open(cf+"tt_meta_data.json", 'r') as f:
             metadata = ujson.load(f)
         
@@ -120,22 +135,18 @@ async def on_message(message):
         for i in metadata['days']: v += f'> {i}\n'
         embed.add_field(name=f'**Дни недели**', value=v,   inline=False)
         await message.channel.send(message.author.mention, embed=embed)
+        
     elif contentType == 'ch':
-        # cf = await parse(temp+f"changes.xlsx", temp)
-        # with open(cf+"tt_meta_data.json", 'r') as f:
-        #     metadata = ujson.load(f)
+        cf = await parseChFile(temp+"changes.xls", temp)
+        with open(cf+"ch_meta_data.json", 'r') as f:
+            metadata = ujson.load(f)
         
-        # embed = Embed(title=f"__**Изменения проверены**__", color=0x00ee00)
+        embed = Embed(title=f"__**Изменения проверены**__", color=0x00ee00)
         
-        # v = ''
-        # for i in metadata['groups']: v += f'> {i}\n'
-        # embed.add_field(name=f'**Группы**',     value=v, inline=False)
-        
-        # v = ''
-        # for i in metadata['days']: v += f'> {i}\n'
-        # embed.add_field(name=f'**Дни недели**', value=v,   inline=False)
-        # await message.channel.send(message.author.mention, embed=embed)
-        pass
+        v = ''
+        for i in metadata['groups']: v += f'> {i}\n'
+        embed.add_field(name=f'**Группы**', value=v, inline=False)
+        await message.channel.send(message.author.mention, embed=embed)
 
 @wBot.slash_command(name="couples", description="Вывести расписание пар")
 async def couples(ctx,
@@ -143,7 +154,7 @@ async def couples(ctx,
                   day: Option(str, "День недели", required=True, autocomplete=utils.basic_autocomplete(get_days))         # type: ignore
                   ):
     embed = Embed(title=f"__**Пары на {day} {group}:**__", color=0xffffff)
-    corp = await parseCache(temp, group, day)
+    corp = await parseTTCache(temp, group, day)
     
     shift = 'Смена неизвестна'
     is_1st = any(map(lambda x: x[1] != "Нету",corp.as_list()[:3]))
@@ -158,6 +169,17 @@ async def couples(ctx,
     try: await message.delete()
     except: print("Delete failed")
     await ctx.send(f'**{shift}**', embed=embed)
+
+#TODO
+#**ИС 2.1-22**
+#> ОБЖ (2 пара)
+#> Алгоритмизация
+#> Преп О. Д. 210
+#
+#**ИС 2.1-22**
+#> История (3 пара)
+#> ЭВМ
+#> Преп О. Д. 206
 
 @wBot.slash_command(name="autosend", description="Автоматическая отправка расписания в канал")
 async def auto_send(ctx,

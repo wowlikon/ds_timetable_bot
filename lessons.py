@@ -22,7 +22,7 @@ class Lesson:
         return {"lesson": self.lesson or "Нету", "teacher": self.teacher or "-", "room": self.room or "-"}
 
     @staticmethod
-    def from_dict(data: dict) -> 'Lessons':
+    def from_dict(data: dict) -> 'Lesson':
         return Lesson(data['lesson'], data['teacher'], data['room'])
 
 class Lessons:
@@ -133,7 +133,6 @@ def parseFile(file: str, cache: str) -> str:
 def parseCache(filename: str, group: str, day: str) -> Lessons:
     with open(filename+'tt_data.json', 'r', encoding='utf-8') as f:
         tt = ujson.load(f)['groups']
-    print(tt)
     g = tt.get(group, {})
     d = g.get(day, {})
     return Lessons.from_dict(d, day)
