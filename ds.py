@@ -74,11 +74,11 @@ async def on_ready():
     print(f"{wBot.user} is ready and online!")
 
 async def get_days(ctx: AutocompleteContext):
-    with open(temp+"tt_meta_data.json", 'r') as f:
+    with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
         return ujson.load(f).get('days', {})
 
 async def get_groups(ctx: AutocompleteContext):
-    with open(temp+"tt_meta_data.json", 'r') as f:
+    with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
         return ujson.load(f).get('groups', {})
 
 @wBot.event
@@ -87,7 +87,7 @@ async def on_message(message):
     contentType = None
     
     try:
-        if len(message.attachments) == 1: raise ValueError("Incorrect file count.")
+        if len(message.attachments) != 1: raise ValueError("Incorrect file count.")
         
         if message.content == "timetable":
             f = message.attachments[0]
@@ -122,7 +122,7 @@ async def on_message(message):
     
     if contentType == 'tt':
         cf = await parseTTFile(temp+f"timetable.xlsx", temp)
-        with open(cf+"tt_meta_data.json", 'r') as f:
+        with open(cf+"tt_meta_data.json", 'r', encoding='utf-8') as f:
             metadata = ujson.load(f)
         
         embed = Embed(title=f"__**Расписание проверенно**__", color=0x00ee00)
@@ -138,7 +138,7 @@ async def on_message(message):
         
     elif contentType == 'ch':
         cf = await parseChFile(temp+"changes.xls", temp)
-        with open(cf+"ch_meta_data.json", 'r') as f:
+        with open(cf+"ch_meta_data.json", 'r', encoding='utf-8') as f:
             metadata = ujson.load(f)
         
         embed = Embed(title=f"__**Изменения проверены**__", color=0x00ee00)

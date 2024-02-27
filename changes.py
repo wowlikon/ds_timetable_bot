@@ -99,11 +99,11 @@ def parseFile(file: str, cache: str) -> str:
 
     data = changes.as_dict()
     with open(cache+'ch_data.json', 'w+', encoding='utf-8') as f:
-        ujson.dump(data, f)
+        ujson.dump(data, f, ensure_ascii=False)
     
-    meta_data = list(data.keys())
+    # meta_data = list(data.keys())
     with open(cache+'ch_meta_data.json', 'w+', encoding='utf-8') as f:
-        ujson.dump({"groups": list(data.keys())}, f)
+        ujson.dump({"groups": list(data.keys())}, f, ensure_ascii=False)
         
     return cache
 

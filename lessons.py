@@ -123,10 +123,10 @@ def parseFile(file: str, cache: str) -> str:
     print("Parsing finished")
     
     with open(cache+'tt_data.json', 'w+', encoding='utf-8') as f:
-        ujson.dump(tt.as_dict(), f)
+        ujson.dump(tt.as_dict(), f, ensure_ascii=False)
     
     with open(cache+'tt_meta_data.json', 'w+', encoding='utf-8') as f:
-        ujson.dump({"days": list(map(str.strip, days.keys())), "groups": list(groups.keys())}, f)
+        ujson.dump({"days": list(map(str.strip, days.keys())), "groups": list(groups.keys())}, f, ensure_ascii=False)
     
     return cache
 
