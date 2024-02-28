@@ -3,17 +3,25 @@ from discord import *
 from discord.ext import commands
 from discord.ext.tasks import loop
 
-import traceback, ujson, datetime, os
 from functools import wraps, partial
-from dotenv import load_dotenv
 import asyncio, aiosqlite
+
+from dotenv import load_dotenv
+import ujson, datetime, os
+import traceback
+
 import lessons, changes
+
 
 load_dotenv()
 temp = os.environ.get('cache')
-wBot = commands.Bot(command_prefix='!', case_insensitive=True)
+wBot = commands.Bot(
+    command_prefix='!',
+    case_insensitive=True,
+    intents=Intents.all()
+    )
 
-async def create_table():
+async def init_db():
     async with aiosqlite.connect('bot.db') as db:
         await db.execute('CREATE TABLE IF NOT EXISTS messages (channel_id INTEGER PRIMARY KEY, group_name TEXT, send_time TIMESTAMP NOT NULL)')
         await db.commit()
@@ -57,7 +65,7 @@ def parseTTFile(file: str, cache: str) -> str:
     return lessons.parseFile(file, cache)
 
 @async_run
-def parseTTCache(cache: str, group: str, day: str) -> list:
+def parseTTCache(cache: str, group: str, day: str) -> lessons.Lessons:
     return lessons.parseCache(cache, group, day)
 
 @async_run
@@ -65,21 +73,29 @@ def parseChFile(file: str, cache: str) -> str:
     return changes.parseFile(file, cache)
 
 @async_run
-def parseChCache(cache: str, group: str, day: str) -> list:
+def parseChCache(cache: str, group: str, day: str) -> changes.Changes:
     return changes.parseCache(cache, group, day)
 
 @wBot.event
 async def on_ready():
-    await create_table()
-    print(f"{wBot.user} is ready and online!")
+    await init_db()
+    print(f"{wBot.user} is ready and online! (ID: {wBot.user.id})") #type: ignore
 
 async def get_days(ctx: AutocompleteContext):
-    with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
-        return ujson.load(f).get('days', {})
+    try:
+        with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
+            return ujson.load(f).get('days', {})
+    except FileNotFoundError as e:
+        print(getattr(e, 'message', str(e)))
+        return []
 
 async def get_groups(ctx: AutocompleteContext):
-    with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
-        return ujson.load(f).get('groups', {})
+    try:
+        with open(temp+"tt_meta_data.json", 'r', encoding='utf-8') as f:
+            return ujson.load(f).get('groups', {})
+    except FileNotFoundError as e:
+        print(getattr(e, 'message', str(e)))
+        return []
 
 @wBot.event
 async def on_message(message):
@@ -87,20 +103,24 @@ async def on_message(message):
     contentType = None
     
     try:
-        if len(message.attachments) != 1: raise ValueError("Incorrect file count.")
-        
         if message.content == "timetable":
+            if len(message.attachments) != 1: raise ValueError("Incorrect file count.")
+            
             f = message.attachments[0]
             if f.filename.split(".")[-1] != "xlsx": raise ValueError("Incorrect file type.")
             await f.save(temp+"timetable.xlsx")
+            
             embed = Embed(title=f"__**Расписание загружено**__", color=0x4488ee)
             embed.add_field(name=f'**{message.author}**', value=f'> файл успешно сохранён идёт проверка...', inline=False)
             contentType = 'tt'
         
         elif message.content == "changes":
+            if len(message.attachments) != 1: raise ValueError("Incorrect file count.")
+            
             f = message.attachments[0]
             if f.filename.split(".")[-1] != "xls": raise ValueError("Incorrect file type.")
             await f.save(temp+"changes.xls")
+            
             embed = Embed(title=f"__**Изменения загружены**__", color=0x4488ee)
             embed.add_field(name=f'**{message.author}**', value=f'> файл успешно сохранён идёт проверка...', inline=False)
             contentType = 'ch'
@@ -228,6 +248,7 @@ async def bg_task():
             wd = now.weekday()
             if now.hour > 12: wd = (wd+1)%7
             await couples(channel, group, (await get_days(channel))[wd])
+    except FileNotFoundError as e: print(getattr(e, 'message', str(e)))
     except Exception: traceback.print_exc()
 
 bg_task.start()

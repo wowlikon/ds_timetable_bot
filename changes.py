@@ -82,8 +82,8 @@ def parseFile(file: str, cache: str) -> str:
     wb = load_workbook(str(filePL.parent)+'/changes.xlsx', True)
 
     ws = wb.active
-    row_count = ws.max_row
-    column_count = ws.max_column
+    row_count    = ws.max_row    #type: ignore
+    column_count = ws.max_column #type: ignore
 
     print(f"{column_count}x{row_count}")
 
@@ -91,7 +91,7 @@ def parseFile(file: str, cache: str) -> str:
     for row in range(row_count):
         line = list()
         for column in range(column_count):
-            v = ws[utils.cell.get_column_letter(column+1)+str(row)].value
+            v = ws[utils.cell.get_column_letter(column+1)+str(row)].value #type: ignore
             if v: line.append(v)
         if len(line) == column_count-2:
             change = Change(*line)
@@ -101,7 +101,6 @@ def parseFile(file: str, cache: str) -> str:
     with open(cache+'ch_data.json', 'w+', encoding='utf-8') as f:
         ujson.dump(data, f, ensure_ascii=False)
     
-    # meta_data = list(data.keys())
     with open(cache+'ch_meta_data.json', 'w+', encoding='utf-8') as f:
         ujson.dump({"groups": list(data.keys())}, f, ensure_ascii=False)
         
@@ -132,6 +131,5 @@ if __name__ == '__main__':
     cf = parseFile(filename, cf)
     data = parseCache(cf, qGroup, qDay)
     
-    print(data.as_list())
-    print(data.as_dict())
+    # print(data.as_dict())
     print(makeTable(data.as_list()))

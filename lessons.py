@@ -82,27 +82,20 @@ def parseFile(file: str, cache: str) -> str:
     wb = load_workbook(file, True)
 
     ws = wb.active
-    row_count = ws.max_row
-    column_count = ws.max_column
+    row_count    = ws.max_row    #type: ignore
+    column_count = ws.max_column #type: ignore
     
     #INFO
     print(f"Table size: {column_count}x{row_count}")
-    
-    day_col = -1
-    group_row = -1
     days = {}
     groups = {}
     for row in range(row_count):
         for column in range(column_count):
-            v = ws[utils.cell.get_column_letter(column+1)+str(row)].value
+            v = ws[utils.cell.get_column_letter(column+1)+str(row)].value #type: ignore
             if v:
                 v = str(v)
-                if isDay(v.strip().lower()):
-                    day_col = column
-                    days[v] = (column, row)
-                if isGroup(v.strip().lower()):
-                    group_row = row
-                    groups[v] = (column, row)
+                if isDay(v.strip().lower()): days[v] = (column, row)
+                if isGroup(v.strip().lower()): groups[v] = (column, row)
     
     tt = TimeTable()
     for g, (gc, _) in groups.items():
@@ -113,9 +106,9 @@ def parseFile(file: str, cache: str) -> str:
             for i in range(0, 11, 2):
                 lessons_day.append(
                     Lesson(
-                        ws[utils.cell.get_column_letter(gc+2)+str(dr+i  )].value,
-                        ws[utils.cell.get_column_letter(gc+2)+str(dr+i+1)].value,
-                        ws[utils.cell.get_column_letter(gc+1)+str(dr+i  )].value
+                        ws[utils.cell.get_column_letter(gc+2)+str(dr+i  )].value, #type: ignore
+                        ws[utils.cell.get_column_letter(gc+2)+str(dr+i+1)].value, #type: ignore
+                        ws[utils.cell.get_column_letter(gc+1)+str(dr+i  )].value  #type: ignore
                     )
                 )
             tt.add(lessons_day, d, g)
@@ -157,5 +150,4 @@ if __name__ == '__main__':
     data = parseCache(cf, qGroup, qDay)
     
     # print(data.as_dict())
-    # print(data.as_list())
     print(makeTable(data.as_list()))
