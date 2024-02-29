@@ -50,11 +50,12 @@ class Lessons:
 
     @staticmethod
     def from_dict(data: dict, day: str) -> 'Lessons':
-        c = data['lessons']
         res = Lessons(day)
+        c = data.get('lessons', {})
         res.lessons = []
         for i in c:
-            res.lessons.append((i['n'], Lesson.from_dict(i)))
+            try: res.lessons.append((i['n'], Lesson.from_dict(i)))
+            except KeyError: pass
         return res
 
 class TimeTable:

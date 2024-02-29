@@ -66,12 +66,12 @@ class Changes:
 
     @staticmethod
     def from_dict(data: dict, day: str) -> 'Changes':
-        c = data['changes']
-        print(c)
         res = Changes()
+        c = data.get('changes', {})
         res.changes = []
         for i in c:
-            res.changes.append(Change.from_dict(i))
+            try: res.changes.append(Change.from_dict(i))
+            except KeyError: pass
         return res
 
 def parseFile(file: str, cache: str) -> str:
