@@ -93,7 +93,7 @@ def parseFile(file: str, cache: str) -> str:
         for column in range(column_count):
             v = ws[utils.cell.get_column_letter(column+1)+str(row)].value #type: ignore
             if v: line.append(v)
-        if len(line) == column_count-2:
+        if len(line) == 6:
             change = Change(*line)
             changes.append(change)
 

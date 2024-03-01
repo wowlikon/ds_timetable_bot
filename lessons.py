@@ -113,7 +113,7 @@ def parseFile(file: str, cache: str) -> str:
                     )
                 )
             tt.add(lessons_day, d, g)
-            print(d, g, 'parsed') #INFO
+            print(d, g, 'parsed')
     print("Parsing finished")
     
     with open(cache+'tt_data.json', 'w+', encoding='utf-8') as f:

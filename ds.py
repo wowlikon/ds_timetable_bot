@@ -177,7 +177,8 @@ async def couples(ctx,
                   group: Option(str, "Введите группу", required=True, autocomplete=utils.basic_autocomplete(get_groups)), # type: ignore
                   day: Option(str, "День недели", required=True, autocomplete=utils.basic_autocomplete(get_days))         # type: ignore
                   ):
-    await ctx.delete()
+    try: await ctx.delete()
+    except errors.NotFound: pass
     embed = Embed(title=f"__**Пары на {day} {group}:**__", color=0xffffff)
     coup = await parseTTCache(temp, group, day)
     
@@ -188,26 +189,34 @@ async def couples(ctx,
     if is_1st and not is_2rd: shift = '1 смена'
     if not is_1st and is_2rd: shift = '2 смена'
     
-    for n, les, teach, room in coup.as_list():
-        embed.add_field(name=f'**{n}**', value=f'> {les}\n> {teach}\n> {room}', inline=False)
+    tmp = coup.as_list()
+    for n, les, teach, room in tmp:
+        if les != "Нету": info = f'*{teach}* ({room})'
+        else: info = '-'
+        embed.add_field(name=f'**{n}**', value=f'> **{les}**\n> {info}', inline=False)
     
     try: await message.delete()
     except: print("Delete failed")
     
-    await ctx.send(f'**{shift}**', embed=embed)
+    if len(tmp):
+        await ctx.send(f'**{shift}**', embed=embed)
+        await asyncio.sleep(0.05)
+        await replaces(ctx, group, day)
+    else: await ctx.send('**Расписания нет**')
 
 @wBot.slash_command(name="replaces", description="Вывести замены")
 async def replaces(ctx,
                   group: Option(str, "Введите группу", required=True, autocomplete=utils.basic_autocomplete(get_groups)), # type: ignore
                   day: Option(str, "День недели", required=True, autocomplete=utils.basic_autocomplete(get_days))         # type: ignore
                   ):
-    await ctx.delete()
+    try: await ctx.delete()
+    except errors.NotFound: pass
     embed = Embed(title=f"__**Замены на {day} {group}:**__", color=0xffffff)
     change = await parseChCache(temp, group, day)
     
     tmp = change.as_list()
     for gr, n, rep, teach, room in tmp:
-        embed.add_field(name=f'**{gr}** ({n} пара)', value=f'> **{rep[1]}**\n> *{teach}* ({room})\n> ~~{rep[0]}~~\n\n', inline=False)
+        embed.add_field(name=f'**{gr}** ({n} пара)', value=f'> **{rep[1]}**\n> ~~{rep[0]}~~\n> *{teach}* ({room})\n\n', inline=False)
     
     try: await message.delete()
     except: print("Delete failed")
@@ -221,7 +230,9 @@ async def auto_send(ctx,
                   h: Option(int, "Часов", required=True, ), # type: ignore
                   m: Option(int, "Минут", required=True, ), # type: ignore
                   ):
-    await ctx.delete()
+    try: await ctx.delete()
+    except errors.NotFound: pass
+    
     try: 
         channel_id = ctx.channel.id
         embed = Embed(title=f"__**Канал {ctx.channel.name} добавлен в автоотправку расписания:**__", color=0x00ee00)
@@ -235,7 +246,9 @@ async def auto_send(ctx,
 
 @wBot.slash_command(name="noautosend", description="Отключить автоматическую отправку расписания")
 async def no_auto_send(ctx):
-    await ctx.delete()
+    try: await ctx.delete()
+    except errors.NotFound: pass
+    
     try: 
         channel_id = ctx.channel.id
         embed = Embed(title=f"__**Канал {ctx.channel.name} удалён из автоотправки расписания**__", color=0xee0000)
